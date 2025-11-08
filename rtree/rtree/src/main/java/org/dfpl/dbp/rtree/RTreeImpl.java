@@ -10,34 +10,36 @@ public class RTreeImpl implements RTree {
 	// 여러분의 프로젝트에는 최소한의 dependency가 포함되어 있어야 함.
 	// 멤버 변수의 활용은 어느정도 자유로움
 	// 단, R-Tree 구현이어야 하고, 요행을 바라지 않는다. 
-	
+
+    private int size=0;
+
 	@Override
 	public void add(Point point) {
-		// TODO Auto-generated method stub
 
+        //if added
+        this.size++;
 	}
 
 	@Override
 	public Iterator<Point> search(Rectangle rectangle) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public Iterator<Point> nearest(Point source, int maxCount) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public void delete(Point point) {
-		// TODO Auto-generated method stub
-		
+
+		//if exist and deleted
+        this.size--;
 	}
 
 	@Override
 	public boolean isEmpty() {
-		// TODO Auto-generated method stub
-		return false;
+        if (size==0) return true;
+        else return false;
 	}
 }
