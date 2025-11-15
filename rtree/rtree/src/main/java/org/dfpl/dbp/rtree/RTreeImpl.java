@@ -230,14 +230,221 @@ public class RTreeImpl implements RTree {
             //반복 후 결과 리스트 반환
             return results.iterator();
         }
+        // Rectangle의 면적 계산 (MBR 크기)
+        private double area(Rectangle r) {
+            if (r == null) return 0;
+
+            return Math.abs(r.getRightBottom().getX() - r.getLeftTop().getX()) *
+                    Math.abs(r.getRightBottom().getY() - r.getLeftTop().getY());
+        }
+
+        // Leaf 그룹의 MBR 통합 계산
+        private Rectangle makeMBR(List<Entry> list) {
+            Rectangle m = list.get(0).getMbr();
+            for (int i = 1; i < list.size(); i++) {
+                m = calculateUnion(m, list.get(i).getMbr());
+            }
+            return m;
+        }
+
+        // Internal 그룹의 MBR 통합 계산
+        private Rectangle makeMBRNode(List<RTreeNode> list) {
+            Rectangle m = list.get(0).mbr;
+            for (int i = 1; i < list.size(); i++) {
+                m = calculateUnion(m, list.get(i).mbr);
+            }
+            return m;
+        }
+
+
+
+        // Leaf 노드를 Linear split 방식으로 2개의 그룹으로 분리하는 함수
+        private void linearSplitEntries(List<Entry> original, List<Entry> g1, List<Entry> g2)
+        {
+            double maxDist = -1;
+            Entry s1 = null, s2 = null;
+
+            // 1) 가장 멀리 떨어진 두 Entry를 seed로 선택
+            for (int i = 0; i < original.size(); i++) {
+                for (int j = i + 1; j < original.size(); j++) {
+
+                    double d = original.get(i).getData().distance(original.get(j).getData());
+
+                    if (d > maxDist) {
+                        maxDist = d;
+                        s1 = original.get(i);
+                        s2 = original.get(j);
+                    }
+                }
+            }
+
+            // seed 두 개를 각각 그룹에 넣기
+            g1.add(s1);
+            g2.add(s2);
+            original.remove(s1);
+            original.remove(s2);
+
+            // 2) 나머지 Entry들을 증가 면적이 최소인 그룹에 배정
+            for (Entry e : original) {
+                double inc1 = area(calculateUnion(makeMBR(g1), e.getMbr()));
+                double inc2 = area(calculateUnion(makeMBR(g2), e.getMbr()));
+
+                if (inc1 < inc2) g1.add(e);
+                else g2.add(e);
+            }
+        }
+
+
+        // Internal 노드를 Linear split 방식으로 2개의 그룹으로 분리하는 함수
+        private void linearSplitNodes(List<RTreeNode> original, List<RTreeNode> g1, List<RTreeNode> g2)
+        {
+            double maxDist = -1;
+            RTreeNode s1 = null, s2 = null;
+
+            // 1) MBR이 서로 가장 멀리 떨어진 두 child를 seed로 선택
+            for (int i = 0; i < original.size(); i++) {
+                for (int j = i + 1; j < original.size(); j++) {
+
+                    double d = minDistSq(original.get(i).mbr, original.get(j).mbr.getLeftTop());
+
+                    if (d > maxDist) {
+                        maxDist = d;
+                        s1 = original.get(i);
+                        s2 = original.get(j);
+                    }
+                }
+            }
+
+            g1.add(s1);
+            g2.add(s2);
+            original.remove(s1);
+            original.remove(s2);
+
+            // 2) 나머지 child들을 증가 면적이 최소인 그룹에 추가
+            for (RTreeNode n : original) {
+                double inc1 = area(calculateUnion(makeMBRNode(g1), n.mbr));
+                double inc2 = area(calculateUnion(makeMBRNode(g2), n.mbr));
+
+                if (inc1 < inc2) g1.add(n);
+                else g2.add(n);
+            }
+        }
+
+
+
+
+        // 삽입할 Entry를 넣기 가장 적합한 Leaf 노드를 선택하는 함수
+        // 규칙: MBR이 증가하는 면적이 가장 작은 child 방향으로 내려감
+        private RTreeNode chooseLeaf(RTreeNode node, Entry entry) {
+
+            // Leaf면 여기서 삽입하면 되므로 바로 반환
+            if (node.isLeaf) return node;
+
+            // 내부 노드일 경우 → 어떤 child로 내려갈 지 결정
+            double bestIncrease = Double.MAX_VALUE;
+            RTreeNode bestChild = null;
+
+            for (RTreeNode child : node.children) {
+
+                // 현재 child의 기존 MBR 면적
+                double before = area(child.mbr);
+
+                // child MBR에 entry의 MBR을 합친 후의 면적
+                double after = area(calculateUnion(child.mbr, entry.getMbr()));
+
+                // MBR 증가량
+                double inc = after - before;
+
+                // 증가량이 최소인 child 선택
+                if (inc < bestIncrease) {
+                    bestIncrease = inc;
+                    bestChild = child;
+                }
+            }
+
+            // 재귀적으로 Leaf까지 찾아 내려감
+            return chooseLeaf(bestChild, entry);
+        }
+
+
+        // 노드가 가득 찼을 때(4개 초과) Split을 수행하는 함수
+        // Leaf / Internal 각각에 맞는 split을 적용
+        private void splitNode(RTreeNode node) {
+
+            // 새로 만들어질 형제 노드
+            RTreeNode newNode = new RTreeNode(node.isLeaf);
+
+            if (node.isLeaf) {
+                // Leaf일 경우 엔트리들을 2개 그룹으로 분리
+                List<Entry> g1 = new ArrayList<>();
+                List<Entry> g2 = new ArrayList<>();
+                linearSplitEntries(node.entries, g1, g2);
+
+                node.entries = g1;
+                newNode.entries = g2;
+            }
+            else {
+                // Internal 노드일 경우 자식 노드를 2개 그룹으로 분리
+                List<RTreeNode> g1 = new ArrayList<>();
+                List<RTreeNode> g2 = new ArrayList<>();
+                linearSplitNodes(node.children, g1, g2);
+
+                node.children = g1;
+                newNode.children = g2;
+
+                // parent 포인터 재설정
+                for (RTreeNode c : g1) c.parent = node;
+                for (RTreeNode c : g2) c.parent = newNode;
+            }
+
+            // 두 노드 각각 MBR 다시 계산
+            node.updateMbr();
+            newNode.updateMbr();
+
+            // 루트가 Split된 경우 → 새로운 루트 생성
+            if (node.parent == null) {
+                RTreeNode newRoot = new RTreeNode(false); // 내부 노드
+                newRoot.addChild(node);
+                newRoot.addChild(newNode);
+                this.root = newRoot;
+                return;
+            }
+
+            // 루트가 아닌 경우 → 부모에 newNode 추가
+            RTreeNode parent = node.parent;
+            parent.addChild(newNode);
+            parent.updateMbr();
+
+            // 부모도 Overflow면 재귀적으로 Split 수행
+            if (parent.isFull()) {
+                splitNode(parent);
+            }
+        }
 
 
 
 
         @Override
         public void add(Point point) {
+            // 삽입할 Entry 생성
+            Rectangle rect = new Rectangle(point, point);
+            Entry entry = new Entry(rect, point);
 
-            //if added
+            // 1. 삽입할 리프 노드 찾기
+            RTreeNode leaf = chooseLeaf(root, entry);
+
+            // 2. 리프에 추가
+            leaf.entries.add(entry);
+            leaf.updateMbr();
+
+            // 3. Overflow → split
+            if (leaf.isFull()) {
+                splitNode(leaf);
+            }
+
+            // 4. 루트 MBR 갱신
+            root.updateMbr();
+
             this.size++;
         }
 
