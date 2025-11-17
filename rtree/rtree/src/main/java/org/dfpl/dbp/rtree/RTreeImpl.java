@@ -447,12 +447,74 @@ public class RTreeImpl implements RTree {
 
             this.size++;
         }
+        
+        
+        private boolean intersects(Rectangle r1, Rectangle r2) {
+            double r1MinX = Math.min(r1.getLeftTop().getX(), r1.getRightBottom().getX());
+            double r1MaxX = Math.max(r1.getLeftTop().getX(), r1.getRightBottom().getX());
+            double r1MinY = Math.min(r1.getLeftTop().getY(), r1.getRightBottom().getY());
+            double r1MaxY = Math.max(r1.getLeftTop().getY(), r1.getRightBottom().getY());
+
+            double r2MinX = Math.min(r2.getLeftTop().getX(), r2.getRightBottom().getX());
+            double r2MaxX = Math.max(r2.getLeftTop().getX(), r2.getRightBottom().getX());
+            double r2MinY = Math.min(r2.getLeftTop().getY(), r2.getRightBottom().getY());
+            double r2MaxY = Math.max(r2.getLeftTop().getY(), r2.getRightBottom().getY());
+
+            boolean noX = r1MaxX < r2MinX || r2MaxX < r1MinX;
+            boolean noY = r1MaxY < r2MinY || r2MaxY < r1MinY;
+
+            return !(noX || noY);
+        }
+        
+        private void searchRecursive(RTreeNode node, Rectangle query, List<Point> results) {
+
+            //  현재 노드의 MBR이 검색 영역과 겹치지 않으면
+            //     MBR을 이용하여 검색 영역 내에 들어오는지 검사 > 겹치지 않으면 가지치기
+            if (node.mbr == null || !intersects(node.mbr, query)) {
+                return;  // 전체 서브트리 무시
+            }
+
+            // 리프 노드인 경우
+            if (node.isLeaf) {
+                // 리프 노드를 찾으면 포함된 도형들이 검색 영역에 포함되는지 확인
+                for (Entry entry : node.entries) {
+                    if (intersects(entry.getMbr(), query)) {  // 포인트 MBR이 검색박스와 겹치면
+                        results.add(entry.getData());         // 결과에 추가
+                    }
+                }
+            }
+
+            // 내부 노드인 경우 (자식 노드들이 있음)
+            else {
+                // 모든 하위 노드를 순회하며 MBR 검사
+                for (RTreeNode child : node.children) {
+
+                    // child의 MBR과 검색박스가 겹치는 노드만 재귀적으로 탐색
+                    if (child.mbr != null && intersects(child.mbr, query)) {
+
+                        // 하위 노드로 내려감 (재귀)
+                        searchRecursive(child, query, results);
+                    }
+                }
+            }
+        }
+
 
         @Override
         public Iterator<Point> search(Rectangle rectangle) {
-            return null;
-        }
+        	
+        	 List<Point> results = new ArrayList<>();
 
+        	    if (this.root == null || this.root.mbr == null) {
+        	        return results.iterator();
+        	    }
+
+        	    searchRecursive(this.root, rectangle, results);
+        	    return results.iterator();
+           
+        }
+        
+       
         @Override
         public void delete(Point point) {
 
