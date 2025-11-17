@@ -1,9 +1,6 @@
 package org.dfpl.dbp.rtree;
 
-import java.util.Iterator;
-import java.util.PriorityQueue;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 
 public class RTreeImpl implements RTree {
@@ -179,7 +176,6 @@ public class RTreeImpl implements RTree {
 
             return new Rectangle(newLeftTop, newRightBottom);
         }
-
         @Override
         public Iterator<Point> nearest(Point source, int maxCount) {
             //결과 리스트
@@ -256,8 +252,6 @@ public class RTreeImpl implements RTree {
             return m;
         }
 
-
-
         // Leaf 노드를 Linear split 방식으로 2개의 그룹으로 분리하는 함수
         private void linearSplitEntries(List<Entry> original, List<Entry> g1, List<Entry> g2)
         {
@@ -294,7 +288,6 @@ public class RTreeImpl implements RTree {
             }
         }
 
-
         // Internal 노드를 Linear split 방식으로 2개의 그룹으로 분리하는 함수
         private void linearSplitNodes(List<RTreeNode> original, List<RTreeNode> g1, List<RTreeNode> g2)
         {
@@ -330,9 +323,6 @@ public class RTreeImpl implements RTree {
             }
         }
 
-
-
-
         // 삽입할 Entry를 넣기 가장 적합한 Leaf 노드를 선택하는 함수
         // 규칙: MBR이 증가하는 면적이 가장 작은 child 방향으로 내려감
         private RTreeNode chooseLeaf(RTreeNode node, Entry entry) {
@@ -365,7 +355,6 @@ public class RTreeImpl implements RTree {
             // 재귀적으로 Leaf까지 찾아 내려감
             return chooseLeaf(bestChild, entry);
         }
-
 
         // 노드가 가득 찼을 때(4개 초과) Split을 수행하는 함수
         // Leaf / Internal 각각에 맞는 split을 적용
@@ -421,9 +410,6 @@ public class RTreeImpl implements RTree {
             }
         }
 
-
-
-
         @Override
         public void add(Point point) {
             // 삽입할 Entry 생성
@@ -455,9 +441,45 @@ public class RTreeImpl implements RTree {
 
         @Override
         public void delete(Point point) {
+            Queue<RTreeNode> queue = new LinkedList<>();
+            queue.add(root);
 
-            //if exist and deleted
-            this.size--;
+            //Queue를 이용한 BFS 탐색
+            while (!queue.isEmpty()) {
+                RTreeNode current = queue.poll();
+
+                //리프 노드일 경우 : 동일한 point가 있는지 탐색
+                if (current.isLeaf) {
+                    Iterator<Entry> it = current.entries.iterator();
+                    while (it.hasNext()) {
+                        Entry entry = it.next();
+                        //동일한 point값이 있다면 삭제
+                        if (entry.getData().equals(point)) {
+                            it.remove();
+                            current.updateMbr();
+                            this.size--;
+
+                            //부모처리 필요 (underflow)
+                            return; // 삭제 완료
+                        }
+                    }
+                }
+                //리프 노드가 아닐 경우 : 해당 영역이 point를 포함하는지 탐색
+                else{
+                    double minX = Math.min(current.mbr.getLeftTop().getX(), current.mbr.getRightBottom().getX());
+                    double maxX = Math.max(current.mbr.getLeftTop().getX(), current.mbr.getRightBottom().getX());
+                    double minY = Math.min(current.mbr.getLeftTop().getY(), current.mbr.getRightBottom().getY());
+                    double maxY = Math.max(current.mbr.getLeftTop().getY(), current.mbr.getRightBottom().getY());
+
+                    //포함한다면 Queue에 추가
+                    if (point.getX() >= minX && point.getX() <= maxX &&
+                            point.getY() >= minY && point.getY() <= maxY){
+                        for(RTreeNode children : current.children) {
+                            queue.add(children);
+                        }
+                    }
+                }
+            }
         }
 
         @Override
