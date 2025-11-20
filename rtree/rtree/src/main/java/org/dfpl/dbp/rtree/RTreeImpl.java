@@ -442,11 +442,36 @@ public class RTreeImpl implements RTree {
             this.size++;
         }
 
+        //inner node의 reinsert를 위한 함수
+        public void add(List<RTreeNode> list, RTreeNode node) {
+            //find bestChild
+            double mn = Double.MAX_VALUE;
+            RTreeNode bestChild = null;
+            for(RTreeNode r : list) {
+                Rectangle newRec = calculateUnion(r.mbr, node.mbr);
+                if(area(newRec) < mn){
+                    mn = area(newRec);
+                    bestChild = r;
+                }
+            }
+
+            //insert
+            //overflow
+            if(bestChild.isFull()) {
+                bestChild.addChild(node);
+                splitNode(bestChild);
+            }
+            else {
+                bestChild.addChild(node);
+            }
+        }
+
         @Override
         public Iterator<Point> search(Rectangle rectangle) {
             return null;
         }
 
+        //rectangle의 area 내부에 point가 존재하는지 확인
         public boolean contains(RTreeNode node, Point point) {
             double minX = Math.min(node.mbr.getLeftTop().getX(), node.mbr.getRightBottom().getX());
             double maxX = Math.max(node.mbr.getLeftTop().getX(), node.mbr.getRightBottom().getX());
@@ -456,6 +481,9 @@ public class RTreeImpl implements RTree {
             return point.getX() >= minX && point.getX() <= maxX && point.getY() >= minY && point.getY() <= maxY;
         }
 
+        //underflow로 확인된 후, 해당 함수가 실행된다.
+        //grandparent node에서부터 차근차근 트리를 재구성한다.
+        //해당 과정에서 delete된 node는 곧바로 reinsert 되기 때문에, this.size의 값을 따로 업데이트 하지 않았다.
         public void underflowRTree(RTreeNode parent)
         {
             //underflow 중단 조건
@@ -471,6 +499,7 @@ public class RTreeImpl implements RTree {
             if(parent.isLeaf) {
                 //replace nodes
                 if (parent.entries.size() < m) {
+                    //[start] reinsert
                     //save node
                     Entry node = parent.entries.get(0);
                     Entry aloneNode = new Entry(node.mbr, node.data);
@@ -479,10 +508,10 @@ public class RTreeImpl implements RTree {
                     parent.entries.remove(node);
                     grandparent.children.remove(parent);
 
-                    //reinsert
                     add(aloneNode.data);
+                    //[end] reinsert
 
-                    //check underflow
+                    //check underflow (reinsert 과정에서 delete가 있기 때문)
                     if(grandparent == root && grandparent.children.size() < m) {
                         //root has one child (자식이 root 자리를 계승)
                         root = root.children.get(0);
@@ -496,6 +525,7 @@ public class RTreeImpl implements RTree {
                 else {
                     //replace nodes
                     if(parent.children.size() < m) {
+                        //[start] reinsert
                         //save node
                         RTreeNode node = parent.children.get(0);
                         RTreeNode aloneNode = new RTreeNode(node);
@@ -504,11 +534,12 @@ public class RTreeImpl implements RTree {
                         parent.children.remove(node);
                         grandparent.children.remove(parent);
 
-                        //add(aloneNode);
+                        add(grandparent.children, aloneNode);
+                        //[end] reinsert
 
-                        //check underflow
+                        //check underflow (reinsert 과정에서 delete가 있기 때문)
                         if(grandparent == root && grandparent.children.size() < m) {
-                            //root has one child
+                            //root has one child (자식이 root 자리를 계승)
                             root = root.children.get(0);
                             root.parent = null;
                         }
@@ -549,8 +580,6 @@ public class RTreeImpl implements RTree {
                             current.updateMbr();
                         }
                         this.size--;
-
-                        return; // 삭제 완료
                     }
                 }
                 //리프 노드가 아닐 경우 : 해당 영역이 point를 포함하는지 탐색
