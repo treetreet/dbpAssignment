@@ -62,6 +62,14 @@ public class RTreeImpl implements RTree {
                 }
             }
 
+            public RTreeNode(RTreeNode origin) {
+                this.mbr = origin.mbr;
+                this.parent = origin.parent;
+                this.isLeaf = origin.isLeaf;
+                this.entries = origin.entries;
+                this.children = origin.children;
+            }
+
             //entry 추가 (루트)
             void addEntry(Entry entry) {
                 this.entries.add(entry);
@@ -439,6 +447,79 @@ public class RTreeImpl implements RTree {
             return null;
         }
 
+        public boolean contains(RTreeNode node, Point point) {
+            double minX = Math.min(node.mbr.getLeftTop().getX(), node.mbr.getRightBottom().getX());
+            double maxX = Math.max(node.mbr.getLeftTop().getX(), node.mbr.getRightBottom().getX());
+            double minY = Math.min(node.mbr.getLeftTop().getY(), node.mbr.getRightBottom().getY());
+            double maxY = Math.max(node.mbr.getLeftTop().getY(), node.mbr.getRightBottom().getY());
+
+            return point.getX() >= minX && point.getX() <= maxX && point.getY() >= minY && point.getY() <= maxY;
+        }
+
+        public void underflowRTree(RTreeNode parent)
+        {
+            //underflow 중단 조건
+            if(isEmpty()) {
+                root = null;
+                return;
+            }
+            else if(parent == root) {
+                return;
+            }
+
+            RTreeNode grandparent = parent.parent;
+            if(parent.isLeaf) {
+                //replace nodes
+                if (parent.entries.size() < m) {
+                    //save node
+                    Entry node = parent.entries.get(0);
+                    Entry aloneNode = new Entry(node.mbr, node.data);
+
+                    //delete node
+                    parent.entries.remove(node);
+                    grandparent.children.remove(parent);
+
+                    //reinsert
+                    add(aloneNode.data);
+
+                    //check underflow
+                    if(grandparent == root && grandparent.children.size() < m) {
+                        //root has one child (자식이 root 자리를 계승)
+                        root = root.children.get(0);
+                        root.parent = null;
+                    }
+                    else if(grandparent.children.size() < m) {
+                        underflowRTree(grandparent);
+                    }
+                }
+                //not leaf
+                else {
+                    //replace nodes
+                    if(parent.children.size() < m) {
+                        //save node
+                        RTreeNode node = parent.children.get(0);
+                        RTreeNode aloneNode = new RTreeNode(node);
+
+                        //delete node
+                        parent.children.remove(node);
+                        grandparent.children.remove(parent);
+
+                        //add(aloneNode);
+
+                        //check underflow
+                        if(grandparent == root && grandparent.children.size() < m) {
+                            //root has one child
+                            root = root.children.get(0);
+                            root.parent = null;
+                        }
+                        else if(grandparent.children.size() < m) {
+                            underflowRTree(grandparent);
+                        }
+                    }
+                }
+            }
+        }
+
         @Override
         public void delete(Point point) {
             Queue<RTreeNode> queue = new LinkedList<>();
@@ -453,30 +534,32 @@ public class RTreeImpl implements RTree {
                     Iterator<Entry> it = current.entries.iterator();
                     while (it.hasNext()) {
                         Entry entry = it.next();
-                        //동일한 point값이 있다면 삭제
-                        if (entry.getData().equals(point)) {
-                            it.remove();
-                            current.updateMbr();
-                            this.size--;
 
-                            //부모처리 필요 (underflow)
-                            return; // 삭제 완료
+                        //동일 point 탐색
+                        if (!entry.getData().equals(point)) continue;
+                        it.remove();
+
+                        // underflow일 경우
+                        if(current.entries.size() <= m - 1)
+                        {
+                            underflowRTree(current);
                         }
+                        else
+                        {
+                            current.updateMbr();
+                        }
+                        this.size--;
+
+                        return; // 삭제 완료
                     }
                 }
                 //리프 노드가 아닐 경우 : 해당 영역이 point를 포함하는지 탐색
                 else{
-                    double minX = Math.min(current.mbr.getLeftTop().getX(), current.mbr.getRightBottom().getX());
-                    double maxX = Math.max(current.mbr.getLeftTop().getX(), current.mbr.getRightBottom().getX());
-                    double minY = Math.min(current.mbr.getLeftTop().getY(), current.mbr.getRightBottom().getY());
-                    double maxY = Math.max(current.mbr.getLeftTop().getY(), current.mbr.getRightBottom().getY());
+                    if (!contains(current, point)) continue;
 
                     //포함한다면 Queue에 추가
-                    if (point.getX() >= minX && point.getX() <= maxX &&
-                            point.getY() >= minY && point.getY() <= maxY){
-                        for(RTreeNode children : current.children) {
-                            queue.add(children);
-                        }
+                    for(RTreeNode children : current.children) {
+                        queue.add(children);
                     }
                 }
             }

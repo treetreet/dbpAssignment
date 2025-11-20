@@ -7,6 +7,7 @@
     <list default="true" id="6aed9dbb-2da8-467a-a329-f514b86d96b9" name="변경" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/rtree/rtree/src/main/java/org/dfpl/dbp/rtree/RTreeImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/rtree/rtree/src/main/java/org/dfpl/dbp/rtree/RTreeImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/rtree/rtree/target/classes/org/dfpl/dbp/rtree/Assignment45.class" beforeDir="false" afterPath="$PROJECT_DIR$/rtree/rtree/target/classes/org/dfpl/dbp/rtree/Assignment45.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/rtree/rtree/target/classes/org/dfpl/dbp/rtree/RTreeImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/rtree/rtree/target/classes/org/dfpl/dbp/rtree/RTreeImpl.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -17,18 +18,50 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "git-widget-placeholder": "delete",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "애플리케이션.Assignment45.executor": "Run"
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="35g9UR0MFuQG9a8y9lRtEIXAPQo" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;delete&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;,
+    &quot;애플리케이션.Assignment45.executor&quot;: &quot;Run&quot;
   }
-}]]></component>
+}</component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.25557.131" />
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-IU-252.25557.131" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="TaskManager">
+    <task active="true" id="Default" summary="디폴트 작업">
+      <changelist id="6aed9dbb-2da8-467a-a329-f514b86d96b9" name="변경" comment="" />
+      <created>1763520867492</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1763520867492</updated>
+      <workItem from="1763520871293" duration="5830000" />
+      <workItem from="1763627269531" duration="4194000" />
+    </task>
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
 </project>
