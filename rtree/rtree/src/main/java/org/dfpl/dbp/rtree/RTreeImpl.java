@@ -484,19 +484,17 @@ public class RTreeImpl implements RTree {
         //underflow로 확인된 후, 해당 함수가 실행된다.
         //grandparent node에서부터 차근차근 트리를 재구성한다.
         //해당 과정에서 delete된 node는 곧바로 reinsert 되기 때문에, this.size의 값을 따로 업데이트 하지 않았다.
-        public void underflowRTree(RTreeNode parent)
-        {
+        public void underflowRTree(RTreeNode parent) {
             //underflow 중단 조건
-            if(isEmpty()) {
+            if (isEmpty()) {
                 root = null;
                 return;
-            }
-            else if(parent == root) {
+            } else if (parent == root) {
                 return;
             }
 
             RTreeNode grandparent = parent.parent;
-            if(parent.isLeaf) {
+            if (parent.isLeaf) {
                 //replace nodes
                 if (parent.entries.size() < m) {
                     //[start] reinsert
@@ -515,49 +513,59 @@ public class RTreeImpl implements RTree {
                     RTreeNode n = parent;
                     do {
                         n.updateMbr();
-                    } while(n != root);
+                        n = n.parent;
+                    } while (n != root);
+                    n = grandparent;
+                    do {
+                        n.updateMbr();
+                        n = n.parent;
+                    } while (n != root);
 
                     //check underflow (reinsert 과정에서 delete가 있기 때문)
-                    if(grandparent == root && grandparent.children.size() < m) {
+                    if (grandparent == root && grandparent.children.size() < m) {
                         //root has one child (자식이 root 자리를 계승)
                         root = root.children.get(0);
                         root.parent = null;
-                    }
-                    else if(grandparent.children.size() < m) {
+                    } else if (grandparent.children.size() < m) {
                         underflowRTree(grandparent);
                     }
                 }
-                //not leaf
-                else {
-                    //replace nodes
-                    if(parent.children.size() < m) {
-                        //[start] reinsert
-                        //save node
-                        RTreeNode node = parent.children.get(0);
-                        RTreeNode aloneNode = new RTreeNode(node);
+            }
+            //not leaf
+            else {
+                //replace nodes
+                if (parent.children.size() < m) {
+                    //[start] reinsert
+                    //save node
+                    RTreeNode node = parent.children.get(0);
+                    RTreeNode aloneNode = new RTreeNode(node);
 
-                        //delete node
-                        parent.children.remove(node);
-                        grandparent.children.remove(parent);
+                    //delete node
+                    parent.children.remove(node);
+                    grandparent.children.remove(parent);
 
-                        add(grandparent.children, aloneNode);
-                        //[end] reinsert
+                    add(grandparent.children, aloneNode);
+                    //[end] reinsert
 
-                        //update mbr
-                        RTreeNode n = aloneNode;
-                        do {
-                            n.updateMbr();
-                        } while(n != root);
+                    //update mbr
+                    RTreeNode n = aloneNode;
+                    do {
+                        n.updateMbr();
+                        n = n.parent;
+                    } while (n != root);
+                    n = grandparent;
+                    do {
+                        n.updateMbr();
+                        n = n.parent;
+                    } while (n != root);
 
-                        //check underflow (reinsert 과정에서 delete가 있기 때문)
-                        if(grandparent == root && grandparent.children.size() < m) {
-                            //root has one child (자식이 root 자리를 계승)
-                            root = root.children.get(0);
-                            root.parent = null;
-                        }
-                        else if(grandparent.children.size() < m) {
-                            underflowRTree(grandparent);
-                        }
+                    //check underflow (reinsert 과정에서 delete가 있기 때문)
+                    if (grandparent == root && grandparent.children.size() < m) {
+                        //root has one child (자식이 root 자리를 계승)
+                        root = root.children.get(0);
+                        root.parent = null;
+                    } else if (grandparent.children.size() < m) {
+                        underflowRTree(grandparent);
                     }
                 }
             }
@@ -568,7 +576,7 @@ public class RTreeImpl implements RTree {
             Queue<RTreeNode> queue = new LinkedList<>();
             queue.add(root);
 
-            //Queue를 이용한 BFS 탐색
+            //Queue를 이용한 유사 BFS 탐색
             while (!queue.isEmpty()) {
                 RTreeNode current = queue.poll();
 
@@ -591,9 +599,9 @@ public class RTreeImpl implements RTree {
                         {
                             //mbr update
                             RTreeNode node = current;
-
                             do {
                                 node.updateMbr();
+                                node = node.parent;
                             } while(node != root);
                         }
                         this.size--;
