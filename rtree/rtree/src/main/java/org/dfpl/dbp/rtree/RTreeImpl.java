@@ -511,6 +511,12 @@ public class RTreeImpl implements RTree {
                     add(aloneNode.data);
                     //[end] reinsert
 
+                    //update mbr
+                    RTreeNode n = parent;
+                    do {
+                        n.updateMbr();
+                    } while(n != root);
+
                     //check underflow (reinsert 과정에서 delete가 있기 때문)
                     if(grandparent == root && grandparent.children.size() < m) {
                         //root has one child (자식이 root 자리를 계승)
@@ -536,6 +542,12 @@ public class RTreeImpl implements RTree {
 
                         add(grandparent.children, aloneNode);
                         //[end] reinsert
+
+                        //update mbr
+                        RTreeNode n = aloneNode;
+                        do {
+                            n.updateMbr();
+                        } while(n != root);
 
                         //check underflow (reinsert 과정에서 delete가 있기 때문)
                         if(grandparent == root && grandparent.children.size() < m) {
@@ -577,7 +589,12 @@ public class RTreeImpl implements RTree {
                         }
                         else
                         {
-                            current.updateMbr();
+                            //mbr update
+                            RTreeNode node = current;
+
+                            do {
+                                node.updateMbr();
+                            } while(node != root);
                         }
                         this.size--;
                     }
