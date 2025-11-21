@@ -526,7 +526,7 @@ public class RTreeImpl implements RTree {
         	    if (this.root == null || this.root.mbr == null) {
         	        return results.iterator();
         	    }
-
+        	    //재귀적 반복
         	    searchRecursive(this.root, rectangle, results);
         	    return results.iterator();
            
