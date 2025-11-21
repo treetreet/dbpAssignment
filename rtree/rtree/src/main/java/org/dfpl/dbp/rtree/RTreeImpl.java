@@ -1,7 +1,10 @@
 package org.dfpl.dbp.rtree;
 
 import java.util.*;
+import java.util.List;
 
+import javax.swing.*;
+import java.awt.*;
 
 public class RTreeImpl implements RTree {
 
@@ -18,10 +21,72 @@ public class RTreeImpl implements RTree {
         private RTreeNode root; // 트리의 루트 노드
         private final int M = 4; // 최대 용량 (4-way)
         private final int m = 2; // 최소 용량 (M/2)
+        private Visualizer visualizer;
 
         public RTreeImpl() {
             this.root = new RTreeNode(true);
+            visualizer = new Visualizer();
         }
+        private class Visualizer {
+            private JFrame frame;
+            private DrawPanel panel;
+            private java.util.List<Point> points = new java.util.ArrayList<>();
+            private java.util.List<Color> pointColors = new ArrayList<>();
+
+            public Visualizer() {
+                frame = new JFrame("R-Tree Visualizer");
+                panel = new DrawPanel();
+
+                frame.setSize(600, 600);
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.add(panel);
+                frame.setVisible(true);
+            }
+
+            // 포인트 추가 + 색상 지정
+            public void addPoint(Point p, Color c) {
+                points.add(p);
+                pointColors.add(c);
+                panel.repaint();
+            }
+
+            // -----------------------------
+            // 그리기 담당 패널
+            // -----------------------------
+            private class DrawPanel extends JPanel {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+
+                    int panelWidth = getWidth();
+                    int panelHeight = getHeight();
+
+                    double maxX = 200.0;
+                    double maxY = 200.0;
+
+                    // 포인트 그리기
+                    for (int i = 0; i < points.size(); i++) {
+                        Point p = points.get(i);
+                        Color c = pointColors.get(i);
+                        g.setColor(c);
+                        int x = (int) (p.getX() / maxX * panelWidth);
+                        int y = (int) (p.getY() / maxY * panelHeight);
+                        g.fillOval(x - 3, y - 3, 6, 6);
+                    }
+
+                    // 검색 박스 그리기
+                    g.setColor(Color.GREEN);
+                    int rectX = (int) (0 / maxX * panelWidth);
+                    int rectY = (int) (0 / maxY * panelHeight);
+                    int rectW = (int) (100 / maxX * panelWidth);
+                    int rectH = (int) (100 / maxY * panelHeight);
+                    g.drawRect(rectX, rectY, rectW, rectH);
+                }
+            }
+        }
+
+        
+
 
 
 
@@ -440,6 +505,10 @@ public class RTreeImpl implements RTree {
             root.updateMbr();
 
             this.size++;
+            
+            visualizer.addPoint(point,Color.BLACK);
+            
+            
         }
         
         
@@ -517,6 +586,8 @@ public class RTreeImpl implements RTree {
                 bestChild.addChild(node);
             }
         }
+        
+        
 
         @Override
         public Iterator<Point> search(Rectangle rectangle) {
@@ -528,6 +599,9 @@ public class RTreeImpl implements RTree {
         	    }
         	    //재귀적 반복
         	    searchRecursive(this.root, rectangle, results);
+        	    for (Point p : results) {
+        	        visualizer.addPoint(p, Color.RED);
+        	    }
         	    return results.iterator();
            
         }
