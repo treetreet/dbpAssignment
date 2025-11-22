@@ -593,6 +593,7 @@ public class RTreeImpl implements RTree {
             root.updateMbr();
 
             visualizer.addPoint(point,Color.BLACK);
+            visualizer.refreshMBRs(root);
         }
         
         
