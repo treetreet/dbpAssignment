@@ -727,6 +727,7 @@ public class RTreeImpl implements RTree {
                     grandparent.children.remove(parent);
 
                     add(aloneNode.data);
+                    this.size--;
                     //[end] reinsert
 
                     //update mbr
@@ -817,11 +818,13 @@ public class RTreeImpl implements RTree {
                             }
                             node.updateMbr();
                         }
-                        visualizer.refresh(root);
-                        if(size == 1) visualizer.rects.clear();
-
                         System.out.println(point + ": Removed!");
                         this.size--;
+
+                        visualizer.refresh(root);
+                        if(size == 2) {
+                            root.mbr = new Rectangle(root.entries.get(0).getData(), root.entries.get(0).getData());
+                        }
 
                         return;
                     }
