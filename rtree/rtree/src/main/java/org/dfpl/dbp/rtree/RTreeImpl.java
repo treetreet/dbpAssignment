@@ -32,6 +32,8 @@ public class RTreeImpl implements RTree {
             private DrawPanel panel;
             private java.util.List<Point> points = new java.util.ArrayList<>();
             private java.util.List<Color> pointColors = new ArrayList<>();
+            private java.util.List<Rectangle> rects = new ArrayList<>();
+            private java.util.List<Color> rectColors = new ArrayList<>();
 
             public Visualizer() {
                 frame = new JFrame("R-Tree Visualizer");
@@ -47,8 +49,60 @@ public class RTreeImpl implements RTree {
             public void addPoint(Point p, Color c) {
                 points.add(p);
                 pointColors.add(c);
-                panel.repaint();
+                forceRepaint();
             }
+
+            // Visualizer 클래스에 추가할 메서드들
+
+            // 전체 초기화
+            public void clear() {
+                rects.clear();
+                rectColors.clear();
+                points.clear();
+                pointColors.clear();
+            }
+
+            // 트리 전체를 순회하며 현재 MBR과 Point들을 수집해서 다시 그림
+            public void refresh(RTreeNode root) {
+                clear();
+                if (root != null && root.mbr != null) {
+                    collectAll(root, 0);
+                }
+                forceRepaint();
+            }
+
+            // 재귀적으로 모든 노드의 MBR과 Point 수집
+            private void collectAll(RTreeNode node, int depth) {
+                if (node == null || node.mbr == null) return;
+
+                // 깊이에 따라 MBR 색상 변경
+                Color[] colors = {Color.RED, Color.ORANGE, Color.BLUE, Color.GREEN, Color.MAGENTA};
+                Color c = colors[depth % colors.length];
+
+                rects.add(node.mbr);
+                rectColors.add(c);
+
+                if (node.isLeaf) {
+                    // 리프 노드면 포인트들 수집
+                    for (Entry entry : node.entries) {
+                        points.add(entry.getData());
+                        pointColors.add(Color.BLACK);
+                    }
+                } else {
+                    // 내부 노드면 자식들 순회
+                    if (node.children != null) {
+                        for (RTreeNode child : node.children) {
+                            collectAll(child, depth + 1);
+                        }
+                    }
+                }
+            }
+
+            // 강제 화면 갱신
+            public void forceRepaint() {
+                panel.paintImmediately(0, 0, panel.getWidth(), panel.getHeight());
+            }
+
 
             // -----------------------------
             // 그리기 담당 패널
@@ -74,13 +128,25 @@ public class RTreeImpl implements RTree {
                         g.fillOval(x - 3, y - 3, 6, 6);
                     }
 
-                    // 검색 박스 그리기
-                    g.setColor(Color.GREEN);
-                    int rectX = (int) (0 / maxX * panelWidth);
-                    int rectY = (int) (0 / maxY * panelHeight);
-                    int rectW = (int) (100 / maxX * panelWidth);
-                    int rectH = (int) (100 / maxY * panelHeight);
-                    g.drawRect(rectX, rectY, rectW, rectH);
+                    // 사각형(MBR) 그리기
+                    for (int i = 0; i < rects.size(); i++) {
+                        Rectangle r = rects.get(i);
+                        Color c = rectColors.get(i);
+                        g.setColor(c);
+
+                        double minX = Math.min(r.getLeftTop().getX(), r.getRightBottom().getX());
+                        double minY = Math.min(r.getLeftTop().getY(), r.getRightBottom().getY());
+                        double width = Math.abs(r.getRightBottom().getX() - r.getLeftTop().getX());
+                        double height = Math.abs(r.getRightBottom().getY() - r.getLeftTop().getY());
+
+                        int x = (int) (minX / maxX * panelWidth);
+                        int y = (int) (minY / maxY * panelHeight);
+                        int w = (int) (width / maxX * panelWidth);
+                        int h = (int) (height / maxY * panelHeight);
+
+                        g.drawRect(x, y, w, h);
+                    }
+
                 }
             }
         }
@@ -94,6 +160,7 @@ public class RTreeImpl implements RTree {
             //리프 노드에 들어가는 구조체
             private Rectangle mbr;
             private Point data;
+            public RTreeNode parent;
 
             public Entry(Rectangle mbr, Point data) {
                 this.mbr = mbr;
@@ -138,6 +205,7 @@ public class RTreeImpl implements RTree {
             //entry 추가 (루트)
             void addEntry(Entry entry) {
                 this.entries.add(entry);
+                entry.parent = this;
             }
 
             //자식 노드 추가
@@ -154,6 +222,14 @@ public class RTreeImpl implements RTree {
                 }
             }
 
+            boolean isOverFlow() {
+                if (isLeaf) {//4-way 기준
+                    return entries.size() > M;
+                } else {
+                    return children.size() > M;
+                }
+            }
+
             void updateMbr() {
                 if (isLeaf) {//리프노드면
                     if (entries.isEmpty()) {
@@ -165,6 +241,8 @@ public class RTreeImpl implements RTree {
                         newMbr = calculateUnion(newMbr, entries.get(i).getMbr()); //mbr 재구성
                     }
                     this.mbr = newMbr;//갱신
+
+                    visualizer.refresh(root);
                 } else {//내부면
                     if (children.isEmpty()) {
                         this.mbr = null;
@@ -175,6 +253,8 @@ public class RTreeImpl implements RTree {
                         newMbr = calculateUnion(newMbr, children.get(i).mbr);//자녀노드의 mbr을 추출해서 재구성
                     }
                     this.mbr = newMbr;//갱신
+
+                    visualizer.refresh(root);
                 }
             }
         }
@@ -478,7 +558,7 @@ public class RTreeImpl implements RTree {
             parent.updateMbr();
 
             // 부모도 Overflow면 재귀적으로 Split 수행
-            if (parent.isFull()) {
+            if (parent.isOverFlow()) {
                 splitNode(parent);
             }
         }
@@ -493,22 +573,26 @@ public class RTreeImpl implements RTree {
             RTreeNode leaf = chooseLeaf(root, entry);
 
             // 2. 리프에 추가
-            leaf.entries.add(entry);
+            leaf.addEntry(entry);
             leaf.updateMbr();
 
             // 3. Overflow → split
-            if (leaf.isFull()) {
+            if (leaf.isOverFlow()) {
                 splitNode(leaf);
             }
 
-            // 4. 루트 MBR 갱신
+            this.size++;
+
+
+            RTreeNode n = leaf;
+            while (n != root) {
+                n.updateMbr();
+                n = n.parent;
+            }
+
             root.updateMbr();
 
-            this.size++;
-            
             visualizer.addPoint(point,Color.BLACK);
-            
-            
         }
         
         
@@ -643,19 +727,16 @@ public class RTreeImpl implements RTree {
                     grandparent.children.remove(parent);
 
                     add(aloneNode.data);
+                    this.size--;
                     //[end] reinsert
 
                     //update mbr
                     RTreeNode n = parent;
-                    do {
+                    while (n != root) {
                         n.updateMbr();
                         n = n.parent;
-                    } while (n != root);
-                    n = grandparent;
-                    do {
-                        n.updateMbr();
-                        n = n.parent;
-                    } while (n != root);
+                    }
+                    root.updateMbr();
 
                     //check underflow (reinsert 과정에서 delete가 있기 때문)
                     if (grandparent == root && grandparent.children.size() < m) {
@@ -685,15 +766,11 @@ public class RTreeImpl implements RTree {
 
                     //update mbr
                     RTreeNode n = aloneNode;
-                    do {
+                    while (n != root) {
                         n.updateMbr();
                         n = n.parent;
-                    } while (n != root);
-                    n = grandparent;
-                    do {
-                        n.updateMbr();
-                        n = n.parent;
-                    } while (n != root);
+                    }
+                    root.updateMbr();
 
                     //check underflow (reinsert 과정에서 delete가 있기 때문)
                     if (grandparent == root && grandparent.children.size() < m) {
@@ -723,7 +800,7 @@ public class RTreeImpl implements RTree {
                         Entry entry = it.next();
 
                         //동일 point 탐색
-                        if (!entry.getData().equals(point)) continue;
+                        if (!(entry.getData().getX() == point.getX() && entry.getData().getY() == point.getY())) continue;
                         it.remove();
 
                         // underflow일 경우
@@ -735,12 +812,21 @@ public class RTreeImpl implements RTree {
                         {
                             //mbr update
                             RTreeNode node = current;
-                            do {
+                            while(node != root) {
                                 node.updateMbr();
                                 node = node.parent;
-                            } while(node != root);
+                            }
+                            node.updateMbr();
                         }
+                        System.out.println(point + ": Removed!");
                         this.size--;
+
+                        visualizer.refresh(root);
+                        if(size == 2) {
+                            root.mbr = new Rectangle(root.entries.get(0).getData(), root.entries.get(0).getData());
+                        }
+
+                        return;
                     }
                 }
                 //리프 노드가 아닐 경우 : 해당 영역이 point를 포함하는지 탐색
